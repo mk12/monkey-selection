@@ -3,7 +3,7 @@
 # This script implements the idea of cumulative selection described in the
 # third chapter of The Blind Watchmaker by Richard Dawkins.
 
-# Performs cumulative selection on phrases.
+# A selector performs cumulative selection on phrases.
 class Selector
   # Creates a new cumulative selector with a 'goal' string, a generation
   # 'width' (number of offspring per litter), and an error probability 'p'.
@@ -14,14 +14,18 @@ class Selector
   end
 
   # Returns the number of generations required to reach the goal phrase by
-  # cumulative selection, starting from a random phrase.
-  def select
+  # cumulative selection, starting from a random phrase. If 'verbose' is true,
+  # prints the chosen phrase from each generation (on separate line).
+  def select(verbose)
     gen = 0
     parent = Phrase.random(@goal.length)
     until parent == @goal
       litter = @width.times.map { parent.reproduce(@p) }
       parent = litter.min_by { |p| p.mean_sqr_err(@goal) }
       gen += 1
+      if verbose
+        puts parent
+      end
     end
     gen
   end
@@ -29,11 +33,11 @@ class Selector
   # Returns the average number of generations selection takes over 'n' trials.
   def average(n)
     raise "invalid n" unless n > 0
-    n.times.reduce(0) { |sum| sum + select } / n.to_f
+    n.times.reduce(0) { |sum| sum + select(false) } / n.to_f
   end
 end
 
-# A sequence of uppercase alphabetical characters.
+# A phrase is a sequence of uppercase alphabetical characters.
 class Phrase
   # Constants for the start and end of the alphabet.
   A = 'A'.ord
@@ -51,6 +55,11 @@ class Phrase
     @chars = s.respond_to?(:chars) ? s.upcase.chars : s
   end
 
+  # Converts the phrase to a string.
+  def to_s
+    @chars.join
+  end
+
   # Returns the number of letters in the phrase.
   def length
     @chars.length
@@ -64,6 +73,12 @@ class Phrase
   # Returns true if this phrase is the same as 'other'.
   def ==(other)
     @chars == other.chars
+  end
+
+  # Returns true if the phrase consists of uppercase alphabetical characters.
+  # This might not be so if the phrase was initialized with a character array.
+  def valid?
+    @chars.all? { |c| c.ord >= A && c.ord <= Z }
   end
 
   # Creates an imperfect copy of this phrase. For each letter in the phrase,
@@ -107,7 +122,7 @@ if __FILE__ == $PROGRAM_NAME
   else
     s = Selector.new(ARGV[0], Integer(ARGV[1]), Float(ARGV[2]))
     if ARGV.length == 3
-      puts s.select
+      puts s.select(true)
     else
       puts s.average(Integer(ARGV[3]))
     end

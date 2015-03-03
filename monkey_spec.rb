@@ -4,7 +4,7 @@ require './monkey.rb'
 
 describe 'Selector' do
   def sel(s, w, p)
-    Selector.new(s, w, p).select
+    Selector.new(s, w, p).select(false)
   end
 
   def avg(s, w, p, n)
@@ -27,6 +27,11 @@ describe 'Selector' do
     expect { avg('', 5, 0, 0) }.to raise_error
     expect { avg('ABC', 5, 0, -1) }.to raise_error
   end
+
+  it 'average of one is the same as select' do
+    expect(avg('', 5, 0, 1) % 1).to eq(0)
+    expect(avg('THIS', 5, 0.2, 1) % 1).to eq(0)
+  end
 end
 
 describe 'Phrase' do
@@ -35,10 +40,6 @@ describe 'Phrase' do
     @rand10 = Phrase.random(10)
     @monty = Phrase.new('monty')
     @python = Phrase.new('python')
-  end
-
-  def valid(p)
-    p.chars.all? { |c| c.ord >= 'A'.ord && c.ord <= 'Z'.ord }
   end
 
   it 'has the correct length' do
@@ -50,10 +51,10 @@ describe 'Phrase' do
   end
 
   it 'consists of uppercase letters' do
-    expect(@rand1).to satisfy { |p| valid(p) }
-    expect(@rand10).to satisfy { |p| valid(p) }
-    expect(@monty).to satisfy { |p| valid(p) }
-    expect(@python).to satisfy { |p| valid(p) }
+    expect(@rand1).to be_valid
+    expect(@rand10).to be_valid
+    expect(@monty).to be_valid
+    expect(@python).to be_valid
   end
 
   it 'reproduces perfectly for p=0' do
@@ -63,7 +64,7 @@ describe 'Phrase' do
     expect(@python.reproduce(0)).to eq(@python)
   end
 
-  it 'reproduces imperfectly different for p=1' do
+  it 'reproduces imperfectly for p=1' do
     expect(@rand1.reproduce(1)).to_not eq(@rand1)
     expect(@rand10.reproduce(1)).to_not eq(@rand10)
     expect(@monty.reproduce(1)).to_not eq(@monty)
