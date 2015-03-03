@@ -29,6 +29,8 @@ There are a few details left unspecified by that description of cumulative selec
 
 After some quick experimenting, I determined that a p-value of about 20% seems to be optimal for reducing the number of generations required. (Too low and things take too long to change; too high and they go all over the place and take longer to stabilize). Also, the number of generations is generally reduced as we increase `width` (the number of children in each generation), but the effect of increase it becomes less and less as it gets large. Values between 20 and 50 seem to work well. All of this probably depends on the length of the phrase, which I did not vary very much.
 
+**Update**: After some more testing, I discovered that the optimal p-value _does_ depends on the length of the phrase. A 20% error rate was good for very short phrases, but for much longer ones, a rate of 1% works _much_ better.
+
 ## License
 
 © 2015 Mitchell Kember

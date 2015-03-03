@@ -24,7 +24,8 @@ class Selector
       parent = litter.min_by { |p| p.mean_sqr_err(@goal) }
       gen += 1
       if verbose
-        puts parent
+        mse = parent.mean_sqr_err(@goal)
+        puts "#{parent} (%.8f)" % mse
       end
     end
     gen
