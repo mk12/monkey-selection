@@ -3,66 +3,113 @@
 # This script implements the idea of cumulative selection described in the
 # third chapter of The Blind Watchmaker by Richard Dawkins.
 
-A = 'A'.ord
-Z = 'Z'.ord
+# Performs cumulative selection on phrases.
+class Selector
+  # Creates a new cumulative selector with a 'goal' string, a generation
+  # 'width' (number of offspring per litter), and an error probability 'p'.
+  def initialize(str, width, p)
+    @goal = Phrase.new(str)
+    @width = width
+    @p = p
+  end
 
+  # Returns the number of generations required to reach the goal phrase by
+  # cumulative selection, starting from a random phrase.
+  def select
+    gen = 0
+    parent = Phrase.random(@goal.length)
+    until parent == @goal
+      litter = @width.times.map { parent.reproduce(@p) }
+      parent = litter.min_by { |p| p.mean_sqr_err(@goal) }
+      gen += 1
+    end
+    gen
+  end
+
+  # Returns the average number of generations selection takes over 'n' trials.
+  def average(n)
+    raise "invalid n" unless n > 0
+    n.times.reduce(0) { |sum| sum + select } / n.to_f
+  end
+end
+
+# A sequence of uppercase alphabetical characters.
+class Phrase
+  # Constants for the start and end of the alphabet.
+  A = 'A'.ord
+  Z = 'Z'.ord
+
+  attr_reader :chars
+
+  # Creates a random phrase of 'n' letters.
+  def self.random(n)
+    self.new (0...n).map { (A + rand(26)).chr }
+  end
+
+  # Creates a phrase from a string or from an array of characters.
+  def initialize(s)
+    @chars = s.respond_to?(:chars) ? s.upcase.chars : s
+  end
+
+  # Returns the number of letters in the phrase.
+  def length
+    @chars.length
+  end
+
+  # Returns the nth letter in the phrase.
+  def [](n)
+    @chars[n]
+  end
+
+  # Returns true if this phrase is the same as 'other'.
+  def ==(other)
+    @chars == other.chars
+  end
+
+  # Creates an imperfect copy of this phrase. For each letter in the phrase,
+  # there is a probability 'p' on [0,1] that it will be copied incorrectly,
+  # meaning it will be an adjacent letter instead (so P becomes Q or R).
+  def reproduce(p)
+    copy = @chars.map do |c|
+      if rand < p
+        (c.ord + (rand <=> 0.5)).clamp(A, Z).chr
+      else
+        c
+      end
+    end
+    self.class.new(copy)
+  end
+
+  # Calculates the mean squared error (MSE) of this phrase with respect to the
+  # 'expected' phrase, letter by letter.
+  def mean_sqr_err(expected)
+    len = [length, expected.length].min
+    sum = (0...len).reduce 0 do |sum, i|
+      o = (self[i].ord - A) / 25.0
+      e = (expected[i].ord - A) / 25.0
+      sum + (o - e)**2
+    end
+    sum / len
+  end
+end
+
+# Extend numbers with a clamping method.
 class Numeric
   def clamp(lo, hi)
     [[self, hi].min, lo].max
   end
 end
 
-# Returns a random array of 'len' uppercase alphabetical letters.
-def rand_chars(len)
-  (0..len-1).map { (A + rand(26)).chr }
-end
-
-# Returns a letter adjacent to the given character (chooses one at random).
-def mistake(c)
-  (c.ord + (rand <=> 0.5)).clamp(A, Z).chr
-end
-
-# Returns a slightly imperfect copy of 'chars'. For each character, there is a
-# probability 'k' between 0 and 1 of an incorrect copy.
-def mutant(chars, k)
-  chars.map { |c| rand < k ? mistake(c) : c }
-end
-
-# Calculates the mean squared error (MSE) of the 'got' character array
-# compared the the expected 'want'.
-def mean_sqr_err(got, want)
-  len = [got.length, want.length].min
-  sum = (0..len-1).reduce 0 do |sum, i|
-    o = (got[i].ord.to_f - A) / 25.0
-    e = (want[i].ord.to_f - A) / 25.0
-    sum + (o - e)**2
+# Parse command line arugments to run 'select' or 'average'.
+if __FILE__ == $PROGRAM_NAME
+  if ARGV.length < 3
+    $stderr.puts 'usage: monkey.rb phrase width p [n]'
+  else
+    s = Selector.new(ARGV[0], Integer(ARGV[1]), Float(ARGV[2]))
+    if ARGV.length == 3
+      puts s.select
+    else
+      puts s.average(Integer(ARGV[3]))
+    end
   end
-  sum / len
 end
-
-# Returns the number of generations it takes to produce the given string
-# using cumulative selection with 'w' children in each generation and using
-# 'k' as the mutation probability.
-def cum_sel(str, w, k)
-  gen = 0
-  goal = str.upcase.chars
-  parent = rand_chars(str.length)
-  until parent == goal
-    children = w.times.map { mutant(parent, k) }
-    parent = children.min_by { |c| mean_sqr_err(c, goal) }
-    gen += 1
-    # puts parent.join
-  end
-  gen
-end
-
-# Returns the average number of generations it takes for cumulative selection
-# to obtain the correct characters, doing 'n' trials.
-def avg_gens(str, w, k, n)
-  raise "invalid n" unless n > 0
-  n.times.reduce(0) { |sum| sum + cum_sel(str, w, k) } / n.to_f
-end
-
-# It appears that a 20% mutation probability (k=0.2) works best. Wider
-# generations (w-values) are better, but the difference becomes smaller and
-# smaller as they get bigger (perhaps it varies logarithmically?).
